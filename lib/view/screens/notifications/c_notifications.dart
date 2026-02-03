@@ -7,6 +7,7 @@ import 'package:only_noodle/constants/app_images.dart';
 import 'package:only_noodle/constants/app_sizes.dart';
 import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
+import 'package:only_noodle/controllers/notifications_controller.dart';
 
 class CNotifications extends StatefulWidget {
   const CNotifications({super.key});
@@ -16,135 +17,42 @@ class CNotifications extends StatefulWidget {
 }
 
 class _CNotificationsState extends State<CNotifications> {
-  bool _showEmpty = true;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _showEmpty = false;
-        });
-      }
-    });
-  }
-
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'date': 'Today',
-      'items': [
-        {
-          'title': 'Account Created!',
-          'subTitle': 'Your account has been created.',
-          'time': '12:33 am',
-          'unread': true,
-        },
-        {
-          'title': 'Order Placed Successfully',
-          'subTitle': 'New order has been placed. View',
-          'time': '12:33 am',
-          'unread': false,
-        },
-        {
-          'title': 'Item added into the cart',
-          'subTitle': '2 items added checkout now. View',
-          'time': '12:33 am',
-          'unread': false,
-        },
-      ],
-    },
-
-    {
-      'date': 'Yesterday',
-      'items': [
-        {
-          'title': 'Order Delivered',
-          'subTitle': 'Order has been delivered. Enjoy!',
-          'time': '12:33 am',
-          'unread': true,
-        },
-        {
-          'title': 'Item added into the cart',
-          'subTitle': '2 items added checkout now. View',
-          'time': '12:33 am',
-          'unread': false,
-        },
-      ],
-    },
-
-    {
-      'date': 'Other',
-      'items': [
-        {
-          'title': 'Order Delivered',
-          'subTitle': 'Order has been delivered. Enjoy!',
-          'time': '12:33 am',
-          'unread': true,
-        },
-        {
-          'title': 'Item added into the cart',
-          'subTitle': '2 items added checkout now. View',
-          'time': '12:33 am',
-          'unread': false,
-        },
-      ],
-    },
-  ];
+  final NotificationsController _controller =
+      Get.put(NotificationsController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: simpleAppBar(title: "Notifications"),
-      body: _showEmpty
-          ? _EmptyState()
-          : ListView.builder(
-              physics: BouncingScrollPhysics(),
-              padding: AppSizes.HORIZONTAL,
-              itemCount: _notifications.length,
-              shrinkWrap: true,
-              itemBuilder: (context, sectionIndex) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    MyText(
-                      text: (_notifications[sectionIndex]['date'] as String)
-                          .toUpperCase(),
-                      size: 12,
-                      letterSpacing: 1.0,
-                      weight: FontWeight.w500,
-                      color: kQuaternaryColor,
-                      paddingTop: 16,
-                      paddingBottom: 8,
-                    ),
-                    ListView.separated(
-                      physics: BouncingScrollPhysics(),
-                      shrinkWrap: true,
-                      padding: AppSizes.ZERO,
-                      itemCount: (_notifications[sectionIndex]['items'] as List)
-                          .length,
-                      itemBuilder: (ctx, itemIndex) {
-                        final item =
-                            (_notifications[sectionIndex]['items']
-                                    as List)[itemIndex]
-                                as Map<String, dynamic>;
-                        return _NotificationTile(
-                          title: item['title'] as String,
-                          subTitle: item['subTitle'] as String,
-                          time: item['time'] as String,
-                          unread: item['unread'] as bool? ?? false,
-                        );
-                      },
-                      separatorBuilder: (ctx, index) {
-                        return Container(
-                          margin: EdgeInsets.symmetric(vertical: 4),
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
+      body: Obx(
+        () {
+          if (_controller.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (_controller.notifications.isEmpty) {
+            return _EmptyState();
+          }
+          return ListView.separated(
+            physics: BouncingScrollPhysics(),
+            padding: AppSizes.HORIZONTAL,
+            itemCount: _controller.notifications.length,
+            shrinkWrap: true,
+            separatorBuilder: (ctx, index) => Container(
+              margin: EdgeInsets.symmetric(vertical: 4),
             ),
+            itemBuilder: (context, index) {
+              final item = _controller.notifications[index];
+              return _NotificationTile(
+                title: item.title,
+                subTitle: item.message,
+                time: item.createdAt?.toIso8601String() ?? '',
+                unread: !item.read,
+                onDelete: () => _controller.delete(item.id),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -152,11 +60,13 @@ class _CNotificationsState extends State<CNotifications> {
 class _NotificationTile extends StatelessWidget {
   final String title, subTitle, time;
   final bool unread;
+  final VoidCallback? onDelete;
   const _NotificationTile({
     required this.title,
     required this.time,
     required this.subTitle,
     required this.unread,
+    this.onDelete,
   });
 
   @override
@@ -174,7 +84,12 @@ class _NotificationTile extends StatelessWidget {
                 color: kFillColor,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Center(child: Image.asset(Assets.imagesTrash, height: 24)),
+              child: GestureDetector(
+                onTap: onDelete,
+                child: Center(
+                  child: Image.asset(Assets.imagesTrash, height: 24),
+                ),
+              ),
             ),
           ),
         ],

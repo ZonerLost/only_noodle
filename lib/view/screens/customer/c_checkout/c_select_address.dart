@@ -7,55 +7,78 @@ import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:only_noodle/controllers/addresses_controller.dart';
 
 class CSelectAddress extends StatelessWidget {
   const CSelectAddress({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(AddressesController());
     return Scaffold(
       appBar: simpleAppBar(title: 'Select Address'),
-      body: ListView.builder(
-        physics: BouncingScrollPhysics(),
-        padding: AppSizes.DEFAULT,
-        shrinkWrap: true,
-        itemCount: 3,
-        itemBuilder: (context, idx) {
-          return GestureDetector(
-            onTap: () {},
-            child: Container(
-              margin: EdgeInsets.only(bottom: 10),
-              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-              decoration: BoxDecoration(
-                color: kFillColor,
-                borderRadius: BorderRadius.circular(20),
+      body: Obx(
+        () {
+          if (controller.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (controller.addresses.isEmpty) {
+            return Center(
+              child: MyText(
+                text: 'No addresses found.',
+                color: kQuaternaryColor,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        MyText(
-                          text: 'Home Address',
-                          size: 16,
-                          weight: FontWeight.w500,
-                        ),
-                        SizedBox(height: 6),
-                        MyText(
-                          text: 'St3, Wilson road, Brooklyn, USA 10121',
-                          size: 12,
-                          color: kQuaternaryColor,
-                          weight: FontWeight.w500,
-                        ),
-                      ],
-                    ),
+            );
+          }
+          return ListView.builder(
+            physics: BouncingScrollPhysics(),
+            padding: AppSizes.DEFAULT,
+            shrinkWrap: true,
+            itemCount: controller.addresses.length,
+            itemBuilder: (context, idx) {
+              final address = controller.addresses[idx];
+              return GestureDetector(
+                onTap: () async {
+                  await controller.setDefault(address.id);
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 10),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: kFillColor,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  if (idx == 0) Image.asset(Assets.imagesCheck, height: 20),
-                ],
-              ),
-            ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            MyText(
+                              text: address.label.isNotEmpty
+                                  ? address.label
+                                  : 'Address',
+                              size: 16,
+                              weight: FontWeight.w500,
+                            ),
+                            SizedBox(height: 6),
+                            MyText(
+                              text: address.displayLine,
+                              size: 12,
+                              color: kQuaternaryColor,
+                              weight: FontWeight.w500,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (address.isDefault)
+                        Image.asset(Assets.imagesCheck, height: 20),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),

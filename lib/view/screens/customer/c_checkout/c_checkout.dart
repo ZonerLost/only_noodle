@@ -2,8 +2,10 @@ import 'package:get/get.dart';
 import 'package:only_noodle/constants/app_colors.dart';
 import 'package:only_noodle/constants/app_images.dart';
 import 'package:only_noodle/constants/app_sizes.dart';
+import 'package:only_noodle/controllers/checkout_controller.dart';
 import 'package:only_noodle/main.dart';
 import 'package:only_noodle/view/screens/customer/c_checkout/c_order_confirmed.dart';
+import 'package:only_noodle/view/screens/customer/c_checkout/c_select_address.dart';
 import 'package:only_noodle/view/widget/common_image_view_widget.dart';
 import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/custom_dialog_widget.dart';
@@ -21,6 +23,9 @@ class CCheckout extends StatefulWidget {
 
 class _CCheckoutState extends State<CCheckout> {
   int _selectedIndex = 0;
+  final CheckoutController _controller = Get.put(CheckoutController());
+  final TextEditingController _promoController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,53 +81,68 @@ class _CCheckoutState extends State<CCheckout> {
               physics: BouncingScrollPhysics(),
               children: [
                 if (_selectedIndex == 0)
-                  Container(
-                    margin: EdgeInsets.only(bottom: 10),
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: kFillColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              MyText(
-                                text: 'Home Address',
-                                size: 16,
-                                weight: FontWeight.w500,
-                              ),
-                              SizedBox(height: 6),
-                              MyText(
-                                text: 'St3, Wilson road, Brooklyn, USA 10121',
-                                size: 12,
-                                color: kQuaternaryColor,
-                                weight: FontWeight.w500,
-                              ),
-                            ],
-                          ),
+                  Obx(
+                    () {
+                      final address = _controller.addresses.isEmpty
+                          ? null
+                          : _controller.addresses.firstWhere(
+                              (a) =>
+                                  a.id ==
+                                  _controller.selectedAddressId.value,
+                              orElse: () => _controller.addresses.first,
+                            );
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 10),
+                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: kFillColor,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: kSecondaryColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: MyText(
-                            text: 'Change',
-                            size: 12,
-                            weight: FontWeight.w600,
-                            color: kSecondaryColor,
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  MyText(
+                                    text: address?.label ?? 'Select Address',
+                                    size: 16,
+                                    weight: FontWeight.w500,
+                                  ),
+                                  SizedBox(height: 6),
+                                  MyText(
+                                    text: address?.displayLine ?? '',
+                                    size: 12,
+                                    color: kQuaternaryColor,
+                                    weight: FontWeight.w500,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => Get.to(() => CSelectAddress()),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: kSecondaryColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                child: MyText(
+                                  text: 'Change',
+                                  size: 12,
+                                  weight: FontWeight.w600,
+                                  color: kSecondaryColor,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   )
                 else ...[
                   Container(
@@ -200,16 +220,35 @@ class _CCheckoutState extends State<CCheckout> {
                   paddingTop: 18,
                   paddingBottom: 12,
                 ),
-                ListView.separated(
-                  separatorBuilder: (context, index) {
-                    return SizedBox(height: 10);
-                  },
-                  physics: BouncingScrollPhysics(),
-                  padding: AppSizes.ZERO,
-                  itemCount: 3,
-                  shrinkWrap: true,
-                  itemBuilder: (context, sectionIndex) {
-                    return _CartItem();
+                Obx(
+                  () {
+                    final cart = _controller.cart.value;
+                    if (cart == null || cart.items.isEmpty) {
+                      return MyText(
+                        text: 'No items in cart.',
+                        color: kQuaternaryColor,
+                      );
+                    }
+                    return ListView.separated(
+                      separatorBuilder: (context, index) {
+                        return SizedBox(height: 10);
+                      },
+                      physics: BouncingScrollPhysics(),
+                      padding: AppSizes.ZERO,
+                      itemCount: cart.items.length,
+                      shrinkWrap: true,
+                      itemBuilder: (context, sectionIndex) {
+                        final item = cart.items[sectionIndex];
+                        return _CartItem(
+                          name: item.product?.name ?? 'Item',
+                          imageUrl: item.product?.imageUrl ?? '',
+                          price: item.itemTotal,
+                          optionsText: item.selectedExtras.isNotEmpty
+                              ? 'Add-on: ${item.selectedExtras.map((e) => e is Map ? e['name'] : e.toString()).join(', ')}'
+                              : 'No add-ons',
+                        );
+                      },
+                    );
                   },
                 ),
                 Container(
@@ -248,84 +287,34 @@ class _CCheckoutState extends State<CCheckout> {
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           physics: BouncingScrollPhysics(),
                           itemCount: 5,
-                          separatorBuilder: (context, index) =>
-                              SizedBox(width: 4),
+                          separatorBuilder: (context, index) => SizedBox(width: 4),
                           itemBuilder: (context, index) {
-                            final title = [
-                              '\$5',
-                              '\$10',
-                              '\$15',
-                              '\$20',
-                              '\$50',
-                            ];
-                            return Container(
-                              padding: EdgeInsets.symmetric(horizontal: 24),
-                              decoration: BoxDecoration(
-                                color: index == 0
-                                    ? kSecondaryColor.withValues(alpha: 0.12)
-                                    : kPrimaryColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: MyText(
-                                  text: title[index],
-                                  size: 14,
-                                  color: index == 0
-                                      ? kSecondaryColor
-                                      : kQuaternaryColor,
-                                  weight: FontWeight.w500,
+                            final amounts = [5, 10, 15, 20, 50];
+                            final amount = amounts[index];
+                            final isSelected = _controller.tipAmount.value == amount;
+                            return GestureDetector(
+                              onTap: () => _controller.setTip(amount.toDouble()),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 24),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? kSecondaryColor.withValues(alpha: 0.12)
+                                      : kPrimaryColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: MyText(
+                                    text: 'EUR $amount',
+                                    size: 14,
+                                    color: isSelected
+                                        ? kSecondaryColor
+                                        : kQuaternaryColor,
+                                    weight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             );
                           },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: EdgeInsets.only(bottom: 10),
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: kFillColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            MyText(
-                              text: '3,454 pts',
-                              size: 16,
-                              weight: FontWeight.w500,
-                            ),
-                            SizedBox(height: 6),
-                            MyText(
-                              text: 'Available loyalty points',
-                              size: 12,
-                              color: kQuaternaryColor,
-                              weight: FontWeight.w500,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: kSecondaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: MyText(
-                          text: 'Redeem',
-                          size: 14,
-                          weight: FontWeight.w500,
-                          color: kPrimaryColor,
                         ),
                       ),
                     ],
@@ -376,101 +365,133 @@ class _CCheckoutState extends State<CCheckout> {
                             enabledBorder: InputBorder.none,
                             focusedErrorBorder: InputBorder.none,
                           ),
+                          controller: _promoController,
                         ),
                       ),
                     ),
                     SizedBox(width: 6),
-                    Container(
-                      width: 96,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: kSecondaryColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                    GestureDetector(
+                      onTap: () => _controller.applyPromo(
+                        _promoController.text.trim(),
                       ),
-                      child: Center(
-                        child: MyText(
-                          text: 'Apply',
-                          size: 16,
-                          weight: FontWeight.w500,
-                          color: kSecondaryColor,
+                      child: Container(
+                        width: 96,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: kSecondaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: MyText(
+                            text: 'Apply',
+                            size: 16,
+                            weight: FontWeight.w500,
+                            color: kSecondaryColor,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 16),
-                ...List.generate(5, (index) {
-                  final List<Map<String, dynamic>> details = [
-                    {
-                      'title': 'Items Price',
-                      'value': '199.00',
-                      'currency': true,
-                    },
-                    {
-                      'title': 'Discount (5%)',
-                      'value': '15.00',
-                      'currency': true,
-                    },
-                    {'title': 'Driver Tip', 'value': '10.00', 'currency': true},
-                    {'title': 'Subtotal', 'value': '500.00', 'currency': true},
-                    {
-                      'title': 'Total Price',
-                      'value': '100.00',
-                      'currency': true,
-                    },
-                  ];
-
-                  final detail = details[index];
-                  final String title = detail['title'] as String;
-                  // Build the widget that shows the value; if currency is true,
-                  // show the currency symbol and the amount together.
-                  final Widget valueWidget = (detail['currency'] as bool)
-                      ? Row(
+                Obx(
+                  () {
+                    final totals = _controller.totals;
+                    final details = [
+                      {
+                        'title': 'Items Price',
+                        'value': (totals['itemsPrice'] ?? 0).toString(),
+                        'currency': true,
+                      },
+                      {
+                        'title': 'Discount',
+                        'value': (totals['discount'] ?? 0).toString(),
+                        'currency': true,
+                      },
+                      {
+                        'title': 'Driver Tip',
+                        'value': _controller.tipAmount.value.toStringAsFixed(2),
+                        'currency': true,
+                      },
+                      {
+                        'title': 'Subtotal',
+                        'value': (totals['subtotal'] ?? 0).toString(),
+                        'currency': true,
+                      },
+                      {
+                        'title': 'Total Price',
+                        'value': (totals['total'] ?? 0).toString(),
+                        'currency': true,
+                      },
+                    ];
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: details.map((detail) {
+                        final String title = detail['title'] as String;
+                        final Widget valueWidget = (detail['currency'] as bool)
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  MyText(text: 'EUR', weight: FontWeight.w700),
+                                  MyText(
+                                    text: detail['value'] as String,
+                                    weight: FontWeight.w500,
+                                  ),
+                                ],
+                              )
+                            : MyText(
+                                text: detail['value'] as String,
+                                weight: FontWeight.w500,
+                              );
+                        return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            MyText(text: '€', weight: FontWeight.w700),
-                            MyText(
-                              text: detail['value'] as String,
-                              weight: FontWeight.w500,
-                            ),
-                          ],
-                        )
-                      : MyText(
-                          text: detail['value'] as String,
-                          weight: FontWeight.w500,
-                        );
-
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: MyText(
-                                text: title,
-                                color: kQuaternaryColor,
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: MyText(
+                                      text: title,
+                                      color: kQuaternaryColor,
+                                    ),
+                                  ),
+                                  valueWidget,
+                                ],
                               ),
                             ),
-                            valueWidget,
+                            if (title == 'Subtotal')
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Image.asset(Assets.imagesDottedBorder),
+                              ),
                           ],
-                        ),
-                      ),
-                      if (title == 'Subtotal')
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Image.asset(Assets.imagesDottedBorder),
-                        ),
-                    ],
-                  );
-                }),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
                 SizedBox(height: 20),
                 MyButton(
                   buttonText: 'Continue to payment',
                   onTap: () {
                     Get.bottomSheet(
-                      _SelectPaymentMethod(),
+                      _SelectPaymentMethod(
+                        onConfirm: (method) async {
+                          final type = _selectedIndex == 0 ? 'delivery' : 'pickup';
+                          final order = await _controller.createOrder(
+                            type: type,
+                            paymentMethod: method,
+                          );
+                          if (order != null) {
+                            Get.back();
+                            Get.bottomSheet(
+                              COrderConfirmed(order: order),
+                              isScrollControlled: true,
+                            );
+                          }
+                        },
+                      ),
                       isScrollControlled: true,
                     );
                   },
@@ -485,7 +506,9 @@ class _CCheckoutState extends State<CCheckout> {
 }
 
 class _EnterCardInfo extends StatelessWidget {
-  const _EnterCardInfo();
+  const _EnterCardInfo({required this.onConfirm});
+
+  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +522,6 @@ class _EnterCardInfo extends StatelessWidget {
           GestureDetector(
             onTap: () {
               Get.back();
-              Get.bottomSheet(_SelectPaymentMethod(), isScrollControlled: true);
             },
             child: Row(
               spacing: 6,
@@ -540,7 +562,6 @@ class _EnterCardInfo extends StatelessWidget {
                 radius: 12,
               ),
               SizedBox(height: 16),
-
               Row(
                 children: [
                   Expanded(
@@ -565,10 +586,7 @@ class _EnterCardInfo extends StatelessWidget {
           SizedBox(height: 16),
           MyButton(
             buttonText: 'Confirm',
-            onTap: () {
-              Get.back();
-              Get.bottomSheet(COrderConfirmed(), isScrollControlled: true);
-            },
+            onTap: onConfirm,
           ),
         ],
       ),
@@ -577,7 +595,9 @@ class _EnterCardInfo extends StatelessWidget {
 }
 
 class _SelectPaymentMethod extends StatefulWidget {
-  const _SelectPaymentMethod();
+  const _SelectPaymentMethod({required this.onConfirm});
+
+  final void Function(String method) onConfirm;
 
   @override
   State<_SelectPaymentMethod> createState() => _SelectPaymentMethodState();
@@ -684,14 +704,24 @@ class _SelectPaymentMethodState extends State<_SelectPaymentMethod> {
               );
             },
           ),
-
           SizedBox(height: 16),
           MyButton(
             buttonText: 'Continue',
             onTap: () {
-              Get.back();
               if (_selectedPaymentIndex == 0) {
-                Get.bottomSheet(_EnterCardInfo(), isScrollControlled: true);
+                Get.back();
+                Get.bottomSheet(
+                  _EnterCardInfo(
+                    onConfirm: () {
+                      Get.back();
+                      widget.onConfirm('stripe');
+                    },
+                  ),
+                  isScrollControlled: true,
+                );
+              } else {
+                Get.back();
+                widget.onConfirm('paypal');
               }
             },
           ),
@@ -702,6 +732,18 @@ class _SelectPaymentMethodState extends State<_SelectPaymentMethod> {
 }
 
 class _CartItem extends StatelessWidget {
+  const _CartItem({
+    required this.name,
+    required this.imageUrl,
+    required this.price,
+    required this.optionsText,
+  });
+
+  final String name;
+  final String imageUrl;
+  final double price;
+  final String optionsText;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -712,7 +754,12 @@ class _CartItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CommonImageView(height: 45, width: 45, radius: 8, url: dummyImg),
+          CommonImageView(
+            height: 45,
+            width: 45,
+            radius: 8,
+            url: imageUrl.isNotEmpty ? imageUrl : dummyImg,
+          ),
           SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -720,12 +767,12 @@ class _CartItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MyText(
-                  text: 'Chicken Cheese Strips',
+                  text: name,
                   size: 14,
                   weight: FontWeight.w500,
                 ),
                 MyText(
-                  text: 'Add-on : Extra Cheese',
+                  text: optionsText,
                   size: 12,
                   weight: FontWeight.w500,
                   color: kQuaternaryColor,
@@ -733,7 +780,11 @@ class _CartItem extends StatelessWidget {
               ],
             ),
           ),
-          MyText(text: '\$199.00', size: 14, weight: FontWeight.w500),
+          MyText(
+            text: 'EUR ${price.toStringAsFixed(2)}',
+            size: 14,
+            weight: FontWeight.w500,
+          ),
         ],
       ),
     );

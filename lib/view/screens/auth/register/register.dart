@@ -22,6 +22,27 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   int _selectedRole = 0;
   AuthController _authController = Get.put(AuthController());
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _passwordController;
+  bool _agree = false;
+  bool _rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +62,7 @@ class _RegisterState extends State<Register> {
           MyTextField(
             labelText: 'Email address',
             hintText: 'Enter your email',
+            controller: _emailController,
             suffix: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [Image.asset(Assets.imagesEmail, height: 20)],
@@ -49,6 +71,7 @@ class _RegisterState extends State<Register> {
           MyTextField(
             labelText: 'Phone number',
             hintText: '+1 234 567 890',
+            controller: _phoneController,
             suffix: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [Image.asset(Assets.imagesPhone, height: 20)],
@@ -57,6 +80,7 @@ class _RegisterState extends State<Register> {
           MyTextField(
             labelText: 'Create password',
             hintText: '********',
+            controller: _passwordController,
             isObSecure: true,
             suffix: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -106,7 +130,12 @@ class _RegisterState extends State<Register> {
           Row(
             spacing: 8,
             children: [
-              CustomCheckBox(isActive: false, onTap: () {}),
+              CustomCheckBox(
+                isActive: _agree,
+                onTap: () {
+                  setState(() => _agree = !_agree);
+                },
+              ),
               Expanded(
                 child: RichText(
                   text: TextSpan(
@@ -144,12 +173,65 @@ class _RegisterState extends State<Register> {
               ),
             ],
           ),
+          SizedBox(height: 16),
+          Row(
+            spacing: 8,
+            children: [
+              CustomCheckBox(
+                isActive: _rememberMe,
+                onTap: () {
+                  setState(() => _rememberMe = !_rememberMe);
+                },
+              ),
+              Expanded(
+                child: MyText(
+                  text: 'Remember me',
+                  size: 16,
+                  paddingLeft: 8,
+                  weight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
           SizedBox(height: 24),
-          MyButton(
-            buttonText: 'Continue',
-            onTap: () {
-              Get.to(() => VerificationCode());
-            },
+          Obx(
+            () => MyButton(
+              buttonText: 'Continue',
+              disabled: _authController.isLoading.value,
+              customChild: _authController.isLoading.value
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: kPrimaryColor,
+                      ),
+                    )
+                  : null,
+              onTap: () async {
+                // Note: backend does not include driver registration; keeping role selection UI as-is.
+                final success = await _authController.register(
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text,
+                  phoneNumber: _phoneController.text.trim(),
+                  agreeToPrivacyPolicy: _agree,
+                  rememberMe: _rememberMe,
+                );
+                if (success) {
+                  Get.to(() => VerificationCode(email: _emailController.text.trim()));
+                }
+              },
+            ),
+          ),
+          Obx(
+            () => _authController.errorMessage.value.isEmpty
+                ? SizedBox.shrink()
+                : MyText(
+                    text: _authController.errorMessage.value,
+                    size: 12,
+                    color: Colors.red,
+                    paddingTop: 12,
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),

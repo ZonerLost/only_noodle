@@ -9,13 +9,15 @@ import 'package:only_noodle/view/widget/common_image_view_widget.dart';
 import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
+import 'package:only_noodle/controllers/driver_home_controller.dart';
 
 class DHome extends StatelessWidget {
   const DHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(DriverHomeController());
     return Scaffold(
       body: NestedScrollView(
         physics: BouncingScrollPhysics(),
@@ -60,16 +62,17 @@ class DHome extends StatelessWidget {
                   ),
                   Align(
                     alignment: Alignment.center,
-                    child: MyText(
-                      paddingTop: 2,
-                      text: 'Christopher Henry',
-                      size: 16,
-                      weight: FontWeight.w500,
+                    child: Obx(
+                      () => MyText(
+                        paddingTop: 2,
+                        text: controller.profile.value?.name ?? 'Driver',
+                        size: 16,
+                        weight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
               ),
-    
               actions: [
                 Center(
                   child: GestureDetector(
@@ -105,124 +108,49 @@ class DHome extends StatelessWidget {
             ),
           ];
         },
-        body: _DOrders(),
+        body: _DOrders(controller: controller),
       ),
     );
   }
 }
 
-class _DOrders extends StatefulWidget {
-  @override
-  State<_DOrders> createState() => _DOrdersState();
-}
+class _DOrders extends StatelessWidget {
+  const _DOrders({required this.controller});
 
-class _DOrdersState extends State<_DOrders> {
-  late final List<Map<String, dynamic>> _orders;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _orders = [
-      {
-        'date': 'Today',
-        'orders': [
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-        ],
-      },
-      {
-        'date': 'Yesterday',
-        'orders': [
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-        ],
-      },
-      {
-        'date': 'Other',
-        'orders': [
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-          {
-            'id': 'SN-343',
-            'customer': 'Chris T.',
-            'price': '€ 50.00',
-            'location': 'Wilson St, San Diego',
-            'date': DateTime(now.year, now.month, now.day, 21, 32),
-            'status': 'Delivered',
-          },
-        ],
-      },
-    ];
-  }
+  final DriverHomeController controller;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView.builder(
-        physics: BouncingScrollPhysics(),
-        padding: AppSizes.DEFAULT,
-        itemCount: _orders.length,
-        shrinkWrap: true,
-        itemBuilder: (context, index) {
+      body: Obx(
+        () {
+          if (controller.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (controller.orders.isEmpty) {
+            return Center(
+              child: MyText(
+                text: 'No orders available.',
+                color: kQuaternaryColor,
+              ),
+            );
+          }
           return ListView.separated(
             separatorBuilder: (context, index) {
               return SizedBox(height: 10);
             },
             physics: BouncingScrollPhysics(),
-            padding: AppSizes.ZERO,
+            padding: AppSizes.DEFAULT,
+            itemCount: controller.orders.length,
             shrinkWrap: true,
-            itemCount: (_orders[index]['orders'] as List).length,
             itemBuilder: (context, idx) {
-              final order = (_orders[index]['orders'] as List)[idx];
-              final date = order['date'] as DateTime;
+              final order = controller.orders[idx];
+              final date = order.createdAt ?? DateTime.now();
               final dateText =
                   '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}   |  ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
               return GestureDetector(
                 onTap: () {
-                  Get.to(() => DOrderDetails());
+                  Get.to(() => DOrderDetails(orderId: order.id));
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -246,7 +174,7 @@ class _DOrdersState extends State<_DOrders> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     MyText(
-                                      text: 'Order ID #${order['id']}',
+                                      text: 'Order ID #${order.orderNumber}',
                                       size: 14,
                                       weight: FontWeight.w600,
                                     ),
@@ -260,7 +188,7 @@ class _DOrdersState extends State<_DOrders> {
                                 ),
                               ),
                               MyText(
-                                text: order['price'] as String,
+                                text: 'EUR ${order.total.toStringAsFixed(2)}',
                                 size: 16,
                                 weight: FontWeight.w600,
                               ),
@@ -286,14 +214,13 @@ class _DOrdersState extends State<_DOrders> {
                                     ),
                                     SizedBox(height: 2),
                                     MyText(
-                                      text: order['customer'] as String,
+                                      text: order.address?.label ?? 'Customer',
                                       size: 14,
                                       weight: FontWeight.w500,
                                     ),
                                   ],
                                 ),
                               ),
-
                               Expanded(
                                 flex: 6,
                                 child: Column(
@@ -307,7 +234,7 @@ class _DOrdersState extends State<_DOrders> {
                                     ),
                                     SizedBox(height: 2),
                                     MyText(
-                                      text: order['location'] as String,
+                                      text: order.address?.displayLine ?? '',
                                       size: 14,
                                       weight: FontWeight.w500,
                                     ),

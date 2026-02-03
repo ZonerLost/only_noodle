@@ -10,6 +10,7 @@ import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:get/get.dart';
+import 'package:only_noodle/view/screens/auth/auth_controller/auth_controller.dart';
 
 class ForgotPassword extends StatefulWidget {
   @override
@@ -18,20 +19,18 @@ class ForgotPassword extends StatefulWidget {
 
 class _ForgotPasswordState extends State<ForgotPassword> {
   late TextEditingController _emailController;
-  late TextEditingController _passwordController;
   int _selectedIndex = 0;
+  final AuthController _authController = Get.put(AuthController());
 
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController();
-    _passwordController = TextEditingController();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -95,6 +94,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             MyTextField(
               labelText: 'Email address',
               hintText: 'Enter your email',
+              controller: _emailController,
               suffix: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [Image.asset(Assets.imagesEmail, height: 20)],
@@ -104,6 +104,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             MyTextField(
               labelText: 'Phone number',
               hintText: 'Enter your phone number',
+              controller: _emailController,
               suffix: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [Image.asset(Assets.imagesPhone, height: 20)],
@@ -119,22 +120,47 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           children: [
             MyButton(
               buttonText: 'Send Verification Link',
-              onTap: () {
-                Get.bottomSheet(
-                  CustomDialog(
-                    image: Assets.imagesMailSent,
-                    title: 'Mail Sent !',
-                    subTitle:
-                        'We have sent a mail on your given email address. Please verify and reset your password.',
-                    buttonText: 'Check Email',
-                    onTap: () {
-                      Get.back();
-                      Get.to(() => ResetPassword());
-                    },
-                  ),
-                  isScrollControlled: true,
+              onTap: () async {
+                if (_selectedIndex == 1) {
+                  Get.snackbar(
+                    'Not Supported',
+                    'Password reset via phone is not supported yet.',
+                    backgroundColor: kFillColor,
+                  );
+                  return;
+                }
+                final success = await _authController.forgotPassword(
+                  email: _emailController.text.trim(),
                 );
+                if (success) {
+                  Get.bottomSheet(
+                    CustomDialog(
+                      image: Assets.imagesMailSent,
+                      title: 'Mail Sent !',
+                      subTitle:
+                          'We have sent a mail on your given email address. Please verify and reset your password.',
+                      buttonText: 'Check Email',
+                      onTap: () {
+                        Get.back();
+                        Get.to(() => ResetPassword());
+                      },
+                    ),
+                    isScrollControlled: true,
+                  );
+                }
               },
+            ),
+            Obx(
+              () => _authController.errorMessage.value.isEmpty
+                  ? SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: MyText(
+                        text: _authController.errorMessage.value,
+                        size: 12,
+                        color: Colors.red,
+                      ),
+                    ),
             ),
             SizedBox(height: 20),
             Wrap(

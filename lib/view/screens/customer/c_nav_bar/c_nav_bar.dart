@@ -9,6 +9,7 @@ import 'package:only_noodle/view/screens/customer/c_home/c_home.dart';
 import 'package:only_noodle/view/screens/customer/c_order_history/c_order_history.dart';
 import 'package:only_noodle/view/screens/customer/c_profile/c_profile.dart';
 import 'package:only_noodle/view/widget/common_image_view_widget.dart';
+import 'package:only_noodle/controllers/profile_controller.dart';
 
 // ignore: must_be_immutable
 class CBottomNavBar extends StatefulWidget {
@@ -18,9 +19,16 @@ class CBottomNavBar extends StatefulWidget {
 
 class _CBottomNavBarState extends State<CBottomNavBar> {
   int _currentIndex = 0;
+  late final ProfileController _profileController;
   void _getCurrentIndex(int index) => setState(() {
     _currentIndex = index;
   });
+
+  @override
+  void initState() {
+    super.initState();
+    _profileController = Get.put(ProfileController());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +63,7 @@ class _CBottomNavBarState extends State<CBottomNavBar> {
 
   Container _buildNavBar(List<Map<String, dynamic>> _items) {
     return Container(
-      height: Platform.isIOS ? null : 65,
+      height: Platform.isIOS ? null : 80,
       decoration: BoxDecoration(
         color: kFillColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -73,15 +81,18 @@ class _CBottomNavBarState extends State<CBottomNavBar> {
         elevation: 0,
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: TextStyle(
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: TextStyle(
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w500,
         ),
-        selectedFontSize: 10,
-        unselectedFontSize: 10,
+        selectedFontSize: 9,
+        unselectedFontSize: 9,
+        iconSize: 18,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
         backgroundColor: Colors.transparent,
         selectedItemColor: kSecondaryColor,
         unselectedItemColor: kQuaternaryColor,
@@ -91,14 +102,23 @@ class _CBottomNavBarState extends State<CBottomNavBar> {
           var data = _items[index];
           return BottomNavigationBarItem(
             icon: Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 2),
               child: index == 3
-                  ? CommonImageView(
-                      height: 24,
-                      width: 24,
-                      radius: 100,
-                      url: dummyImg,
-                      fit: BoxFit.cover,
+                  ? Obx(
+                      () => CommonImageView(
+                        height: 24,
+                        width: 24,
+                        radius: 100,
+                        url: _profileController
+                                    .profile
+                                    .value
+                                    ?.profilePicture
+                                    .isNotEmpty ==
+                                true
+                            ? _profileController.profile.value!.profilePicture
+                            : dummyImg,
+                        fit: BoxFit.cover,
+                      ),
                     )
                   : ImageIcon(
                       AssetImage(

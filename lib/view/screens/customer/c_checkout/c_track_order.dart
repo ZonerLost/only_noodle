@@ -9,97 +9,128 @@ import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/custom_dialog_widget.dart';
 import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
+import 'package:only_noodle/controllers/track_order_controller.dart';
 
 class CTrackOrder extends StatefulWidget {
-  const CTrackOrder({super.key});
+  const CTrackOrder({super.key, required this.orderId});
+
+  final String orderId;
 
   @override
   State<CTrackOrder> createState() => _CTrackOrderState();
 }
 
 class _CTrackOrderState extends State<CTrackOrder> {
+  late final TrackOrderController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.put(
+      TrackOrderController(widget.orderId),
+      tag: widget.orderId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: simpleAppBar(title: 'Track order'),
-      body: ListView(
-        shrinkWrap: true,
-        padding: AppSizes.DEFAULT,
-        physics: BouncingScrollPhysics(),
-        children: [
-          Container(
-            margin: EdgeInsets.only(bottom: 10),
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: kFillColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Obx(
+        () {
+          if (_controller.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          final order = _controller.order.value;
+          if (order == null) {
+            return Center(
+              child: MyText(
+                text: 'Order not found.',
+                color: kQuaternaryColor,
+              ),
+            );
+          }
+          return ListView(
+            shrinkWrap: true,
+            padding: AppSizes.DEFAULT,
+            physics: BouncingScrollPhysics(),
+            children: [
+              Container(
+                margin: EdgeInsets.only(bottom: 10),
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kFillColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset(Assets.imagesReciept, height: 40),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Image.asset(Assets.imagesReciept, height: 40),
+                        MyText(
+                          text: 'Order ID #${order.orderNumber}',
+                          size: 14,
+                          weight: FontWeight.w500,
+                          color: kQuaternaryColor,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
                     MyText(
-                      text: 'Order ID #SN-324',
+                      text: 'Order is ${order.status}',
+                      size: 18,
+                      weight: FontWeight.w600,
+                    ),
+                    MyText(
+                      paddingTop: 4,
+                      text: order.estimatedDeliveryTime == null
+                          ? 'Exp arriving time N/A'
+                          : 'Exp arriving time ${order.estimatedDeliveryTime}',
                       size: 14,
-                      weight: FontWeight.w500,
                       color: kQuaternaryColor,
+                      weight: FontWeight.w500,
+                    ),
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 10),
+                      height: 1,
+                      color: kBorderColor,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(4, (index) {
+                        final steps = [
+                          'Accepted',
+                          'Processing',
+                          'Pickup',
+                          'Delivered',
+                        ];
+                        final stepLabel = steps[index];
+
+                        return Column(
+                          spacing: 6,
+                          children: [
+                            Image.asset(
+                              index >= 2
+                                  ? Assets.imagesStepperIconEmpty
+                                  : Assets.imagesStepperIconFilled,
+                              height: 28,
+                            ),
+                            MyText(
+                              text: stepLabel,
+                              size: 12,
+                              weight: FontWeight.w500,
+                              color:
+                                  index <= 1 ? kTertiaryColor : kQuaternaryColor,
+                            ),
+                          ],
+                        );
+                      }),
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
-                MyText(
-                  text: 'Order is Preparing',
-                  size: 18,
-                  weight: FontWeight.w600,
-                ),
-                MyText(
-                  paddingTop: 4,
-                  text: 'Exp arriving time 09:30 pm',
-                  size: 14,
-                  color: kQuaternaryColor,
-                  weight: FontWeight.w500,
-                ),
-                Container(
-                  margin: EdgeInsets.symmetric(vertical: 10),
-                  height: 1,
-                  color: kBorderColor,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(4, (index) {
-                    final steps = [
-                      'Accepted',
-                      'Processing',
-                      'Pickup',
-                      'Delivered',
-                    ];
-                    final stepLabel = steps[index];
-
-                    return Column(
-                      spacing: 6,
-                      children: [
-                        Image.asset(
-                          index >= 2
-                              ? Assets.imagesStepperIconEmpty
-                              : Assets.imagesStepperIconFilled,
-                          height: 28,
-                        ),
-                        MyText(
-                          text: stepLabel,
-                          size: 12,
-                          weight: FontWeight.w500,
-                          color: index <= 1 ? kTertiaryColor : kQuaternaryColor,
-                        ),
-                      ],
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
+              ),
 
           Container(
             margin: EdgeInsets.only(bottom: 10),
@@ -195,107 +226,126 @@ class _CTrackOrderState extends State<CTrackOrder> {
                   weight: FontWeight.w500,
                   color: kQuaternaryColor,
                 ),
-                ...List.generate(3, (index) {
+                ...order.items.map<Widget>((item) {
+                  final map = item is Map<String, dynamic> ? item : {};
+                  final name = (map['name'] ?? 'Item').toString();
+                  final qty = (map['quantity'] ?? 1).toString();
+                  final price = (map['price'] ?? map['total'] ?? 0).toString();
                   return Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Row(
                       children: [
-                        MyText(text: '1x', weight: FontWeight.w600),
+                        MyText(text: '${qty}x', weight: FontWeight.w600),
                         Expanded(
                           child: MyText(
                             paddingLeft: 10,
-                            text: ' Big Might Burger',
+                            text: name,
                             color: kQuaternaryColor,
                           ),
                         ),
-                        MyText(text: '€', weight: FontWeight.w700),
-                        MyText(text: '50.00', weight: FontWeight.w500),
+                        MyText(text: 'EUR', weight: FontWeight.w700),
+                        MyText(text: price, weight: FontWeight.w500),
                       ],
                     ),
                   );
-                }),
+                }).toList(),
               ],
             ),
           ),
 
-          SizedBox(height: 16),
-        ],
+              SizedBox(height: 16),
+            ],
+          );
+        },
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: kFillColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-        ),
-        padding: AppSizes.DEFAULT,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ...List.generate(3, (index) {
-              final List<Map<String, dynamic>> details = [
-                {'title': 'Items Price', 'value': '500.00', 'currency': true},
-                {'title': 'Total Price', 'value': '100.00', 'currency': true},
-                {
-                  'title': 'Payment Type',
-                  'value': 'Cash on Delivery',
-                  'currency': false,
-                },
-              ];
+      bottomNavigationBar: Obx(
+        () {
+          final order = _controller.order.value;
+          if (order == null) return SizedBox.shrink();
+          return Container(
+            decoration: BoxDecoration(
+              color: kFillColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            padding: AppSizes.DEFAULT,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...List.generate(3, (index) {
+                  final List<Map<String, dynamic>> details = [
+                    {
+                      'title': 'Items Price',
+                      'value': order.subtotal.toStringAsFixed(2),
+                      'currency': true,
+                    },
+                    {
+                      'title': 'Total Price',
+                      'value': order.total.toStringAsFixed(2),
+                      'currency': true,
+                    },
+                    {
+                      'title': 'Payment Type',
+                      'value': order.paymentMethod.isNotEmpty
+                          ? order.paymentMethod
+                          : 'Cash on Delivery',
+                      'currency': false,
+                    },
+                  ];
 
-              final detail = details[index];
-              final String title = detail['title'] as String;
-              // Build the widget that shows the value; if currency is true,
-              // show the currency symbol and the amount together.
-              final Widget valueWidget = (detail['currency'] as bool)
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        MyText(text: '€', weight: FontWeight.w700),
-                        MyText(
+                  final detail = details[index];
+                  final String title = detail['title'] as String;
+                  final Widget valueWidget = (detail['currency'] as bool)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MyText(text: 'EUR', weight: FontWeight.w700),
+                            MyText(
+                              text: detail['value'] as String,
+                              weight: FontWeight.w500,
+                            ),
+                          ],
+                        )
+                      : MyText(
                           text: detail['value'] as String,
-                          weight: FontWeight.w500,
-                        ),
-                      ],
-                    )
-                  : MyText(
-                      text: detail['value'] as String,
-                      weight: FontWeight.w700,
-                    );
+                          weight: FontWeight.w700,
+                        );
 
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: MyText(text: title, color: kQuaternaryColor),
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: MyText(text: title, color: kQuaternaryColor),
+                            ),
+                            valueWidget,
+                          ],
                         ),
-                        valueWidget,
-                      ],
-                    ),
-                  ),
-                  // Divider between items (except after the last one)
-                  if (index < details.length - 1)
-                    index == 0
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Image.asset(Assets.imagesDottedBorder),
-                          )
-                        : Container(
-                            height: 1,
-                            margin: EdgeInsets.symmetric(vertical: 6),
-                            color: kBorderColor,
-                          ),
-                ],
-              );
-            }),
-          ],
-        ),
+                      ),
+                      if (index < details.length - 1)
+                        index == 0
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Image.asset(Assets.imagesDottedBorder),
+                              )
+                            : Container(
+                                height: 1,
+                                margin: EdgeInsets.symmetric(vertical: 6),
+                                color: kBorderColor,
+                              ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

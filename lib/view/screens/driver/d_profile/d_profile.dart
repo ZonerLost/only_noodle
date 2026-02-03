@@ -12,6 +12,9 @@ import 'package:only_noodle/view/widget/common_image_view_widget.dart';
 import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:get/get.dart';
+import 'package:only_noodle/controllers/driver_profile_controller.dart';
+import 'package:only_noodle/view/screens/auth/auth_controller/auth_controller.dart';
+import 'package:only_noodle/view/screens/auth/login/login.dart';
 
 class DProfile extends StatefulWidget {
   const DProfile({super.key});
@@ -22,6 +25,9 @@ class DProfile extends StatefulWidget {
 
 class _DProfileState extends State<DProfile> {
   final controller = ValueNotifier<bool>(false);
+  final DriverProfileController _profileController =
+      Get.put(DriverProfileController());
+  final AuthController _authController = Get.put(AuthController());
 
   @override
   Widget build(BuildContext context) {
@@ -65,18 +71,22 @@ class _DProfileState extends State<DProfile> {
                     ),
                   ],
                 ),
-                MyText(
-                  paddingTop: 16,
-                  text: 'Christopher Henry',
-                  size: 16,
-                  weight: FontWeight.w500,
+                Obx(
+                  () => MyText(
+                    paddingTop: 16,
+                    text: _profileController.profile.value?.name ?? 'Driver',
+                    size: 16,
+                    weight: FontWeight.w500,
+                  ),
                 ),
-                MyText(
-                  paddingTop: 4,
-                  text: 'christopherhenry344@gmail.com',
-                  size: 12,
-                  color: kQuaternaryColor,
-                  weight: FontWeight.w500,
+                Obx(
+                  () => MyText(
+                    paddingTop: 4,
+                    text: _profileController.profile.value?.email ?? '',
+                    size: 12,
+                    color: kQuaternaryColor,
+                    weight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -88,12 +98,14 @@ class _DProfileState extends State<DProfile> {
               final stats = [
                 {
                   'period': 'This Week',
-                  'value': '242',
+                  'value':
+                      (_profileController.stats['orders'] ?? 0).toString(),
                   'label': 'Orders Completed',
                 },
                 {
                   'period': 'This Week',
-                  'value': '€ 89.00',
+                  'value':
+                      'EUR ${(_profileController.tipsSummary['total'] ?? 0).toString()}',
                   'label': 'Tips Collected',
                 },
               ];
@@ -159,7 +171,6 @@ class _DProfileState extends State<DProfile> {
               );
             }),
           ),
-
           MyText(
             text: 'SETTINGS',
             size: 12,
@@ -191,7 +202,6 @@ class _DProfileState extends State<DProfile> {
               return _ProfileTile(
                 icon: detail['icon'] ?? '',
                 title: detail['title'] ?? '',
-
                 onTap: () {
                   switch (index) {
                     case 0:
@@ -214,6 +224,8 @@ class _DProfileState extends State<DProfile> {
                           buttonText: 'Yes, Logout',
                           onTap: () {
                             Get.back();
+                            _authController.logout();
+                            Get.offAll(() => Login());
                           },
                         ),
                         isScrollControlled: true,

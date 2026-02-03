@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_core/get_core.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get.dart';
 import 'package:only_noodle/constants/app_colors.dart';
 import 'package:only_noodle/constants/app_images.dart';
+import 'package:only_noodle/models/order.dart';
 import 'package:only_noodle/view/screens/customer/c_checkout/c_track_order.dart';
 import 'package:only_noodle/view/screens/customer/c_nav_bar/c_nav_bar.dart';
 import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 
 class COrderConfirmed extends StatelessWidget {
-  const COrderConfirmed({super.key});
+  const COrderConfirmed({super.key, required this.order});
+
+  final Order order;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class COrderConfirmed extends StatelessWidget {
             MyText(
               paddingTop: 8,
               text:
-                  'Congratulation! You order has been placed successfully and you’ll receive a confirmation email and our delivery rider will call you shortly',
+                  'Congratulation! You order has been placed successfully and you will receive a confirmation email and our delivery rider will call you shortly.',
               color: kQuaternaryColor,
               textAlign: TextAlign.center,
               lineHeight: 1.5,
@@ -60,13 +62,27 @@ class COrderConfirmed extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final List<Map<String, dynamic>> details = [
-                  {'title': 'Date & Time', 'value': 'Oct 23 | 12:00 PM'},
-                  {'title': 'Exp Delivery Time', 'value': '90 mins'},
-                  {'title': 'Order Type', 'value': 'Delivery'},
-                  {'title': 'Total price', 'value': '500.00'},
+                  {
+                    'title': 'Date & Time',
+                    'value': order.createdAt?.toIso8601String() ?? 'N/A',
+                  },
+                  {
+                    'title': 'Exp Delivery Time',
+                    'value': order.estimatedDeliveryTime?.toIso8601String() ?? 'N/A',
+                  },
+                  {
+                    'title': 'Order Type',
+                    'value': order.type,
+                  },
+                  {
+                    'title': 'Total price',
+                    'value': 'EUR ${order.total.toStringAsFixed(2)}',
+                  },
                   {
                     'title': 'Payment Method Used',
-                    'value': 'Master card ***56',
+                    'value': order.paymentMethod.isNotEmpty
+                        ? order.paymentMethod
+                        : 'Cash',
                   },
                 ];
 
@@ -90,11 +106,6 @@ class COrderConfirmed extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (title == 'Subtotal')
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Image.asset(Assets.imagesDottedBorder),
-                      ),
                   ],
                 );
               },
@@ -103,7 +114,7 @@ class COrderConfirmed extends StatelessWidget {
             MyButton(
               buttonText: 'Track order',
               onTap: () {
-                Get.to(() => CTrackOrder());
+                Get.to(() => CTrackOrder(orderId: order.id));
               },
             ),
             SizedBox(height: 10),

@@ -47,16 +47,16 @@ class MyButton extends StatelessWidget {
                 ? Colors.transparent
                 : kPrimaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(radius ?? 50),
-            child:
-                customChild ??
-                Center(
-                  child: MyText(
+            child: Center(
+              child:
+                  customChild ??
+                  MyText(
                     text: buttonText,
                     size: textSize ?? 16,
                     weight: weight ?? FontWeight.w500,
                     color: textColor ?? kPrimaryColor,
                   ),
-                ),
+            ),
           ),
         ),
       ),
@@ -107,16 +107,16 @@ class MyBorderButton extends StatelessWidget {
           splashColor: kTertiaryColor.withValues(alpha: 0.1),
           highlightColor: kTertiaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(radius ?? 50),
-          child:
-              customChild ??
-              Center(
-                child: MyText(
+          child: Center(
+            child:
+                customChild ??
+                MyText(
                   text: buttonText,
                   size: textSize ?? 16,
                   weight: weight ?? FontWeight.w500,
                   color: textColor ?? kTertiaryColor,
                 ),
-              ),
+          ),
         ),
       ),
     );

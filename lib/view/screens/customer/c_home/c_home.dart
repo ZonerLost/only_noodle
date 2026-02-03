@@ -4,9 +4,9 @@ import 'package:only_noodle/constants/app_sizes.dart';
 import 'package:only_noodle/main.dart';
 import 'package:only_noodle/view/screens/customer/c_cart/c_cart.dart';
 import 'package:only_noodle/view/screens/customer/c_home/c_restaurant_details.dart';
+import 'package:only_noodle/view/screens/customer/c_explore/c_explore.dart';
 import 'package:only_noodle/view/screens/customer/c_reviews/c_reviews.dart';
 import 'package:only_noodle/view/screens/customer/c_search/c_search.dart';
-import 'package:only_noodle/view/screens/driver/d_home/d_order_details.dart';
 import 'package:only_noodle/view/screens/notifications/c_notifications.dart';
 import 'package:only_noodle/view/widget/common_image_view_widget.dart';
 import 'package:only_noodle/view/widget/custom_dialog_widget.dart';
@@ -14,13 +14,15 @@ import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
+import 'package:only_noodle/controllers/customer_home_controller.dart';
 
 class CHome extends StatelessWidget {
   const CHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(CustomerHomeController());
     return Scaffold(
       body: NestedScrollView(
         physics: BouncingScrollPhysics(),
@@ -43,11 +45,16 @@ class CHome extends StatelessWidget {
                     size: 12,
                     weight: FontWeight.w500,
                   ),
-                  MyText(
-                    paddingTop: 2,
-                    text: 'Christopher Henry',
-                    size: 16,
-                    weight: FontWeight.w500,
+                  Obx(
+                    () => MyText(
+                      paddingTop: 2,
+                      text:
+                          controller.user.value?.name.isNotEmpty == true
+                              ? controller.user.value!.name
+                              : 'Guest',
+                      size: 16,
+                      weight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -130,6 +137,18 @@ class CHome extends StatelessWidget {
           padding: AppSizes.VERTICAL,
           physics: BouncingScrollPhysics(),
           children: [
+            Obx(
+              () => controller.errorMessage.value.isEmpty
+                  ? SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: MyText(
+                        text: controller.errorMessage.value,
+                        size: 12,
+                        color: Colors.red,
+                      ),
+                    ),
+            ),
             Container(
               margin: AppSizes.HORIZONTAL,
               height: 140,
@@ -153,13 +172,13 @@ class CHome extends StatelessWidget {
                   ),
                   SizedBox(
                     width: 100,
-                    child: MyButton(
-                      height: 38,
-                      textSize: 12,
-                      buttonText: 'Order Now',
-                      onTap: () => Get.to(() => DOrderDetails()),
+                      child: MyButton(
+                        height: 38,
+                        textSize: 12,
+                        buttonText: 'Order Now',
+                        onTap: () => Get.to(() => CExplore()),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -178,57 +197,83 @@ class CHome extends StatelessWidget {
                     text: 'View all >',
                     weight: FontWeight.w500,
                     color: kSecondaryColor,
+                    onTap: () => Get.to(() => CExplore()),
                   ),
                 ],
               ),
             ),
-            GridView.builder(
-              padding: AppSizes.HORIZONTAL,
-              physics: BouncingScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 4,
-                mainAxisExtent: 56,
-                crossAxisSpacing: 4,
-              ),
-              itemCount: 4,
-              itemBuilder: (BuildContext context, int index) {
-                final List<Map<String, String>> categories = [
-                  {'title': 'Breakfast', 'image': Assets.imagesBreakfast},
-                  {'title': 'Lunch', 'image': Assets.imagesLunch},
-                  {'title': 'Dinner', 'image': Assets.imagesDinner},
-                  {'title': 'Desserts', 'image': Assets.imagesDessert},
-                ];
-                final item = categories[index % categories.length];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: kFillColor,
-                    borderRadius: BorderRadius.circular(20),
+            Obx(
+              () {
+                if (controller.isLoading.value) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                final cats = controller.categories;
+                if (cats.isEmpty) {
+                  return Padding(
+                    padding: AppSizes.HORIZONTAL,
+                    child: MyText(
+                      text: 'No categories available.',
+                      size: 12,
+                      color: kQuaternaryColor,
+                    ),
+                  );
+                }
+                return GridView.builder(
+                  padding: AppSizes.HORIZONTAL,
+                  physics: BouncingScrollPhysics(),
+                  shrinkWrap: true,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 4,
+                    mainAxisExtent: 56,
+                    crossAxisSpacing: 4,
                   ),
-                  padding: EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          item['image']!,
-                          height: 45,
-                          width: 45,
-                          fit: BoxFit.cover,
+                  itemCount: cats.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final item = cats[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Get.to(() => CExplore(initialCuisine: item.name));
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: kFillColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: EdgeInsets.all(4),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: item.imageUrl.isNotEmpty
+                                  ? CommonImageView(
+                                      height: 45,
+                                      width: 45,
+                                      radius: 12,
+                                      url: item.imageUrl,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.asset(
+                                      Assets.imagesBreakfast,
+                                      height: 45,
+                                      width: 45,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: MyText(
+                                text: item.name,
+                                size: 14,
+                                weight: FontWeight.w500,
+                              ),
+                            ),
+                            Image.asset(Assets.imagesArrowNext, height: 20),
+                          ],
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: MyText(
-                          text: item['title']!,
-                          size: 14,
-                          weight: FontWeight.w500,
-                        ),
-                      ),
-                      Image.asset(Assets.imagesArrowNext, height: 20),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -247,189 +292,186 @@ class CHome extends StatelessWidget {
                     text: 'View all >',
                     weight: FontWeight.w500,
                     color: kSecondaryColor,
+                    onTap: () => Get.to(() => CExplore()),
                   ),
                 ],
               ),
             ),
-            SizedBox(
-              height: 230,
-              child: ListView.separated(
-                separatorBuilder: (context, index) {
-                  return SizedBox(width: 12);
-                },
-                shrinkWrap: true,
-                scrollDirection: Axis.horizontal,
-                padding: AppSizes.HORIZONTAL,
-                physics: BouncingScrollPhysics(),
-                itemCount: 6,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => Get.to(() => CRestaurantDetails()),
-                    child: Container(
-                      width: 315,
-                      decoration: BoxDecoration(
-                        color: kFillColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(12),
-                                  ),
-                                  child: CommonImageView(
-                                    width: Get.width,
-                                    radius: 0,
-                                    url: dummyImg,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-
-                                // Bottom overlay with details
-                                Positioned(
-                                  left: 12,
-                                  right: 12,
-                                  top: 12,
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 8.5,
-                                                vertical: 5,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: kFillColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Image.asset(
-                                                    Assets.imagesTime,
-                                                    height: 12,
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  MyText(
-                                                    text: '15 mins',
-                                                    size: 10,
-                                                    paddingRight: 4,
-                                                    weight: FontWeight.w500,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            SizedBox(height: 8),
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 8.5,
-                                                vertical: 5,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: kGreenColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Image.asset(
-                                                    Assets.imagesDiscount,
-                                                    height: 12,
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  MyText(
-                                                    text:
-                                                        '25% discount on all items',
-                                                    size: 10,
-                                                    color: kFillColor,
-                                                    paddingRight: 4,
-                                                    weight: FontWeight.w500,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Image.asset(
-                                        Assets.imagesHear,
-                                        height: 32,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    spacing: 4,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      MyText(
-                                        text: 'The Spice Room',
-                                        size: 14,
-                                        weight: FontWeight.w500,
-                                      ),
-                                      MyText(
-                                        text: '1.8 km  |  \$10 Delivery fee',
-                                        size: 12,
-                                        color: kQuaternaryColor,
-                                        weight: FontWeight.w500,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Image.asset(Assets.imagesStar, height: 14),
-                                MyText(
-                                  text: '4.7',
-                                  paddingLeft: 2,
-                                  size: 12,
-                                  paddingRight: 4,
-                                ),
-                                Container(
-                                  width: 1,
-                                  height: 18,
-                                  color: Color(0xffE3E3E3),
-                                ),
-                                MyText(
-                                  onTap: () {
-                                    Get.to(() => CReviews());
-                                  },
-                                  paddingLeft: 4,
-                                  text: '50k+ reviews',
-                                  weight: FontWeight.w500,
-                                  size: 12,
-                                  color: kSecondaryColor,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+            Obx(
+              () {
+                if (controller.isLoading.value) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                final list = controller.restaurants;
+                if (list.isEmpty) {
+                  return Padding(
+                    padding: AppSizes.HORIZONTAL,
+                    child: MyText(
+                      text: 'No restaurants available.',
+                      size: 12,
+                      color: kQuaternaryColor,
                     ),
                   );
-                },
-              ),
+                }
+                return SizedBox(
+                  height: 230,
+                  child: ListView.separated(
+                    separatorBuilder: (context, index) {
+                      return SizedBox(width: 12);
+                    },
+                    shrinkWrap: true,
+                    scrollDirection: Axis.horizontal,
+                    padding: AppSizes.HORIZONTAL,
+                    physics: BouncingScrollPhysics(),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final restaurant = list[index];
+                      return GestureDetector(
+                        onTap: () => Get.to(
+                          () => CRestaurantDetails(restaurantId: restaurant.id),
+                        ),
+                        child: Container(
+                          width: 315,
+                          decoration: BoxDecoration(
+                            color: kFillColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(12),
+                                      ),
+                                      child: CommonImageView(
+                                        width: Get.width,
+                                        radius: 0,
+                                        url: restaurant.imageUrl.isNotEmpty
+                                            ? restaurant.imageUrl
+                                            : dummyImg,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 12,
+                                      right: 12,
+                                      top: 12,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 8.5,
+                                                    vertical: 5,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: kFillColor,
+                                                    borderRadius:
+                                                        BorderRadius.circular(6),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Image.asset(
+                                                        Assets.imagesTime,
+                                                        height: 12,
+                                                      ),
+                                                      SizedBox(width: 4),
+                                                      MyText(
+                                                        text: restaurant
+                                                                .deliveryTime.isNotEmpty
+                                                            ? restaurant.deliveryTime
+                                                            : 'N/A',
+                                                        size: 10,
+                                                        paddingRight: 4,
+                                                        weight: FontWeight.w500,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Image.asset(
+                                            Assets.imagesHear,
+                                            height: 32,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        spacing: 4,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          MyText(
+                                            text: restaurant.name,
+                                            size: 14,
+                                            weight: FontWeight.w500,
+                                          ),
+                                          MyText(
+                                            text:
+                                                'EUR ${restaurant.deliveryFee.toStringAsFixed(2)} Delivery fee',
+                                            size: 12,
+                                            color: kQuaternaryColor,
+                                            weight: FontWeight.w500,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Image.asset(Assets.imagesStar, height: 14),
+                                    MyText(
+                                      text: restaurant.rating.toStringAsFixed(1),
+                                      paddingLeft: 2,
+                                      size: 12,
+                                      paddingRight: 4,
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 18,
+                                      color: Color(0xffE3E3E3),
+                                    ),
+                                    MyText(
+                                      onTap: () {
+                                        Get.to(() => CReviews(restaurantId: restaurant.id));
+                                      },
+                                      paddingLeft: 4,
+                                      text:
+                                          '${restaurant.reviewCount} reviews',
+                                      weight: FontWeight.w500,
+                                      size: 12,
+                                      color: kSecondaryColor,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ],
         ),

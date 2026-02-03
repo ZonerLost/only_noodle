@@ -12,6 +12,8 @@ import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:get/get.dart';
+import '../auth_controller/auth_controller.dart';
+import 'package:only_noodle/view/screens/customer/c_nav_bar/c_nav_bar.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -21,6 +23,8 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
+  final AuthController _authController = Get.put(AuthController());
+  bool _rememberMe = true;
 
   @override
   void initState() {
@@ -83,7 +87,12 @@ class _LoginState extends State<Login> {
           ),
           Row(
             children: [
-              CustomCheckBox(isActive: true, onTap: () {}),
+              CustomCheckBox(
+                isActive: _rememberMe,
+                onTap: () {
+                  setState(() => _rememberMe = !_rememberMe);
+                },
+              ),
               Expanded(
                 child: MyText(
                   text: 'Remember me',
@@ -95,11 +104,45 @@ class _LoginState extends State<Login> {
             ],
           ),
           SizedBox(height: 24),
-          MyButton(
-            buttonText: 'Login',
-            onTap: () {
-              Get.to(() => DHome());
-            },
+          Obx(
+            () => MyButton(
+              buttonText: 'Login',
+              disabled: _authController.isLoading.value,
+              customChild: _authController.isLoading.value
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: kPrimaryColor,
+                      ),
+                    )
+                  : null,
+              onTap: () async {
+                final success = await _authController.login(
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text,
+                  rememberMe: _rememberMe,
+                );
+                if (success) {
+                  if (_authController.isDriver) {
+                    Get.offAll(() => DHome());
+                  } else {
+                    Get.offAll(() => CBottomNavBar());
+                  }
+                }
+              },
+            ),
+          ),
+          Obx(
+            () => _authController.errorMessage.value.isEmpty
+                ? SizedBox.shrink()
+                : MyText(
+                    text: _authController.errorMessage.value,
+                    size: 12,
+                    color: Colors.red,
+                    paddingTop: 12,
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),

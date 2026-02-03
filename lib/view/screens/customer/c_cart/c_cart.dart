@@ -10,6 +10,7 @@ import 'package:only_noodle/view/widget/common_image_view_widget.dart';
 import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
+import 'package:only_noodle/controllers/cart_controller.dart';
 
 class CCart extends StatefulWidget {
   const CCart({super.key});
@@ -19,41 +20,61 @@ class CCart extends StatefulWidget {
 }
 
 class _CCartState extends State<CCart> {
-  bool _showEmpty = true;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _showEmpty = false;
-        });
-      }
-    });
-  }
+  final CartController _controller = Get.put(CartController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: simpleAppBar(title: "Shopping Cart"),
-      body: _showEmpty
-          ? _EmptyState()
-          : ListView.separated(
-              separatorBuilder: (context, index) {
-                return SizedBox(height: 10);
-              },
-              physics: BouncingScrollPhysics(),
-              padding: AppSizes.HORIZONTAL,
-              itemCount: 3,
-              shrinkWrap: true,
-              itemBuilder: (context, sectionIndex) {
-                return _CartItem();
-              },
-            ),
-      bottomNavigationBar: _showEmpty
-          ? null
-          : Container(
+      body: Obx(
+        () {
+          if (_controller.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          final cart = _controller.cart.value;
+          if (cart == null || cart.items.isEmpty) {
+            return _EmptyState();
+          }
+          return ListView.separated(
+            separatorBuilder: (context, index) {
+              return SizedBox(height: 10);
+            },
+            physics: BouncingScrollPhysics(),
+            padding: AppSizes.HORIZONTAL,
+            itemCount: cart.items.length,
+            shrinkWrap: true,
+            itemBuilder: (context, sectionIndex) {
+              final item = cart.items[sectionIndex];
+              return _CartItem(
+                itemId: item.id,
+                name: item.product?.name ?? 'Item',
+                imageUrl: item.product?.imageUrl ?? '',
+                optionsText: item.selectedExtras.isNotEmpty
+                    ? 'Add-on: ${item.selectedExtras.map((e) => e is Map ? e['name'] : e.toString()).join(', ')}'
+                    : 'No add-ons',
+                price: item.itemTotal,
+                quantity: item.quantity,
+                onIncrease: () => _controller.increaseItem(
+                  item.id,
+                  item.quantity,
+                ),
+                onDecrease: () => _controller.decreaseItem(
+                  item.id,
+                  item.quantity,
+                ),
+                onRemove: () => _controller.removeItem(item.id),
+              );
+            },
+          );
+        },
+      ),
+      bottomNavigationBar: Obx(
+        () {
+          final cart = _controller.cart.value;
+          if (cart == null || cart.items.isEmpty) {
+            return SizedBox.shrink();
+          }
+          return Container(
               decoration: BoxDecoration(
                 color: kFillColor,
                 borderRadius: BorderRadius.only(
@@ -106,15 +127,22 @@ class _CCartState extends State<CCart> {
                   ),
                   ...List.generate(3, (index) {
                     final List<Map<String, dynamic>> details = [
-                      {'title': 'Items', 'value': '3', 'currency': false},
+                      {
+                        'title': 'Items',
+                        'value': cart.items
+                            .fold<int>(0, (sum, item) => sum + item.quantity)
+                            .toString(),
+                        'currency': false,
+                      },
                       {
                         'title': 'Items Price',
-                        'value': '100.00',
+                        'value': cart.subtotal.toStringAsFixed(2),
                         'currency': true,
                       },
                       {
                         'title': 'Subtotal',
-                        'value': '100.00',
+                        'value': (cart.subtotal - cart.discount)
+                            .toStringAsFixed(2),
                         'currency': true,
                       },
                     ];
@@ -173,12 +201,36 @@ class _CCartState extends State<CCart> {
                   ),
                 ],
               ),
-            ),
+            );
+        },
+      ),
     );
   }
 }
 
 class _CartItem extends StatelessWidget {
+  const _CartItem({
+    required this.itemId,
+    required this.name,
+    required this.optionsText,
+    required this.price,
+    required this.quantity,
+    required this.onIncrease,
+    required this.onDecrease,
+    required this.onRemove,
+    required this.imageUrl,
+  });
+
+  final String itemId;
+  final String name;
+  final String optionsText;
+  final double price;
+  final int quantity;
+  final VoidCallback onIncrease;
+  final VoidCallback onDecrease;
+  final VoidCallback onRemove;
+  final String imageUrl;
+
   @override
   Widget build(BuildContext context) {
     return Slidable(
@@ -194,7 +246,12 @@ class _CartItem extends StatelessWidget {
                 color: kFillColor,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Center(child: Image.asset(Assets.imagesTrash, height: 24)),
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Center(
+                  child: Image.asset(Assets.imagesTrash, height: 24),
+                ),
+              ),
             ),
           ),
         ],
@@ -207,7 +264,12 @@ class _CartItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CommonImageView(height: 45, width: 45, radius: 8, url: dummyImg),
+            CommonImageView(
+              height: 45,
+              width: 45,
+              radius: 8,
+              url: imageUrl.isNotEmpty ? imageUrl : dummyImg,
+            ),
             SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -215,12 +277,12 @@ class _CartItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   MyText(
-                    text: 'Chicken Cheese Strips',
+                    text: name,
                     size: 14,
                     weight: FontWeight.w500,
                   ),
                   MyText(
-                    text: 'Add-on : Extra Cheese',
+                    text: optionsText,
                     size: 12,
                     weight: FontWeight.w500,
                     color: kQuaternaryColor,
@@ -233,14 +295,28 @@ class _CartItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                MyText(text: '\$199.00', size: 14, weight: FontWeight.w500),
+                MyText(
+                  text: 'EUR ${price.toStringAsFixed(2)}',
+                  size: 14,
+                  weight: FontWeight.w500,
+                ),
                 Row(
                   spacing: 10,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(Assets.imagesRemove, height: 20),
-                    MyText(text: '1', size: 16, weight: FontWeight.w500),
-                    Image.asset(Assets.imagesAdd, height: 20),
+                    GestureDetector(
+                      onTap: onDecrease,
+                      child: Image.asset(Assets.imagesRemove, height: 20),
+                    ),
+                    MyText(
+                      text: quantity.toString(),
+                      size: 16,
+                      weight: FontWeight.w500,
+                    ),
+                    GestureDetector(
+                      onTap: onIncrease,
+                      child: Image.asset(Assets.imagesAdd, height: 20),
+                    ),
                   ],
                 ),
               ],

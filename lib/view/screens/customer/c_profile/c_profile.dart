@@ -17,6 +17,9 @@ import 'package:only_noodle/view/widget/custom_app_bar.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:flutter_advanced_switch/flutter_advanced_switch.dart';
 import 'package:get/get.dart';
+import 'package:only_noodle/controllers/profile_controller.dart';
+import 'package:only_noodle/view/screens/auth/auth_controller/auth_controller.dart';
+import 'package:only_noodle/view/screens/auth/login/login.dart';
 
 class CProfile extends StatefulWidget {
   const CProfile({super.key});
@@ -27,6 +30,8 @@ class CProfile extends StatefulWidget {
 
 class _CProfileState extends State<CProfile> {
   final controller = ValueNotifier<bool>(false);
+  final ProfileController _profileController = Get.put(ProfileController());
+  final AuthController _authController = Get.put(AuthController());
 
   @override
   Widget build(BuildContext context) {
@@ -74,18 +79,22 @@ class _CProfileState extends State<CProfile> {
                     ),
                   ],
                 ),
-                MyText(
-                  paddingTop: 16,
-                  text: 'Christopher Henry',
-                  size: 16,
-                  weight: FontWeight.w500,
+                Obx(
+                  () => MyText(
+                    paddingTop: 16,
+                    text: _profileController.profile.value?.name ?? 'Guest',
+                    size: 16,
+                    weight: FontWeight.w500,
+                  ),
                 ),
-                MyText(
-                  paddingTop: 4,
-                  text: 'christopherhenry344@gmail.com',
-                  size: 12,
-                  color: kQuaternaryColor,
-                  weight: FontWeight.w500,
+                Obx(
+                  () => MyText(
+                    paddingTop: 4,
+                    text: _profileController.profile.value?.email ?? '',
+                    size: 12,
+                    color: kQuaternaryColor,
+                    weight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -221,6 +230,8 @@ class _CProfileState extends State<CProfile> {
                           buttonText: 'Yes, Logout',
                           onTap: () {
                             Get.back();
+                            _authController.logout();
+                            Get.offAll(() => Login());
                           },
                         ),
                         isScrollControlled: true,
