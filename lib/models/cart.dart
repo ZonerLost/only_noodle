@@ -20,11 +20,40 @@ class CartItem {
   });
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
+    final productJson = json['product'];
+    Product? product;
+    if (productJson is Map<String, dynamic>) {
+      product = Product.fromJson(productJson);
+    } else {
+      final productId = (json['productId'] ?? json['product_id'] ?? '').toString();
+      final name = (json['productName'] ?? json['name'] ?? '').toString();
+      final imageUrl = (json['productImage'] ??
+              json['imageUrl'] ??
+              json['image'] ??
+              json['thumbnail'] ??
+              '')
+          .toString();
+      if (productId.isNotEmpty || name.isNotEmpty || imageUrl.isNotEmpty) {
+        final price = (json['price'] as num?)?.toDouble() ??
+            (json['itemTotal'] as num?)?.toDouble() ??
+            0;
+        product = Product(
+          id: productId,
+          name: name.isNotEmpty ? name : 'Item',
+          description: '',
+          price: price,
+          imageUrl: imageUrl,
+          categoryId: '',
+          isAvailable: true,
+          isFeatured: false,
+          options: const [],
+          extras: const [],
+        );
+      }
+    }
     return CartItem(
       id: (json['id'] ?? '').toString(),
-      product: json['product'] is Map<String, dynamic>
-          ? Product.fromJson(json['product'] as Map<String, dynamic>)
-          : null,
+      product: product,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       selectedOptions: (json['selectedOptions'] as List?) ?? const [],
       selectedExtras: (json['selectedExtras'] as List?) ?? const [],
@@ -57,8 +86,8 @@ class Cart {
         .map(CartItem.fromJson)
         .toList();
     return Cart(
-      id: (json['id'] ?? '').toString(),
-      userId: (json['userId'] ?? '').toString(),
+      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      userId: (json['userId'] ?? json['user'] ?? '').toString(),
       items: items,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       promoCode: (json['promoCode'] ?? '').toString(),

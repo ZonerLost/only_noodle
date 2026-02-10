@@ -86,7 +86,7 @@ class AuthController extends GetxController {
         rememberMe: rememberMe,
       );
       user.value = result;
-      role.value = 'customer';
+      role.value = ServiceLocator.authStorage.role ?? 'customer';
       return true;
     } on ApiException catch (error) {
       errorMessage.value = error.message;

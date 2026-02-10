@@ -33,7 +33,7 @@ class AuthService {
       if (userJson != null && tokens != null) {
         return _handleAuthResponse(
           data,
-          role: 'customer',
+          fallbackRole: 'customer',
           rememberMe: rememberMe,
         );
       }
@@ -81,7 +81,7 @@ class AuthService {
       );
       return _handleAuthResponse(
         data,
-        role: 'customer',
+        fallbackRole: 'customer',
         rememberMe: rememberMe,
       );
     } on ApiException catch (error) {
@@ -97,7 +97,7 @@ class AuthService {
         );
         return _handleAuthResponse(
           data,
-          role: 'driver',
+          fallbackRole: 'driver',
           rememberMe: rememberMe,
         );
       }
@@ -193,7 +193,7 @@ class AuthService {
 
   UserProfile _handleAuthResponse(
     dynamic data, {
-    required String role,
+    String? fallbackRole,
     required bool rememberMe,
   }) {
     if (data is Map<String, dynamic>) {
@@ -203,10 +203,14 @@ class AuthService {
           tokens?['accessToken']?.toString() ?? data['accessToken']?.toString();
       final refreshToken =
           tokens?['refreshToken']?.toString() ?? data['refreshToken']?.toString();
+      final roleFromUser = userJson?['role']?.toString();
+      final roleToSave = (roleFromUser != null && roleFromUser.isNotEmpty)
+          ? roleFromUser
+          : (fallbackRole ?? 'customer');
       if (userJson != null && accessToken != null && refreshToken != null) {
         _storage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
         _storage.saveRememberMe(rememberMe);
-        _storage.saveRole(role);
+        _storage.saveRole(roleToSave);
         final user = UserProfile.fromJson(userJson);
         _storage.saveUser(user.toJson());
         return user;

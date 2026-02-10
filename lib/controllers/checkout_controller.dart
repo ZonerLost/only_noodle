@@ -40,6 +40,8 @@ class CheckoutController extends GetxController {
         selectedAddressId.value = defaultAddress.id;
       } else if (list.isNotEmpty) {
         selectedAddressId.value = list.first.id;
+      } else {
+        selectedAddressId.value = '';
       }
       await calculateTotals();
     } on ApiException catch (error) {
@@ -65,6 +67,14 @@ class CheckoutController extends GetxController {
     await calculateTotals();
   }
 
+  Future<void> setSelectedAddress(Address address) async {
+    selectedAddressId.value = address.id;
+    if (!addresses.any((a) => a.id == address.id)) {
+      addresses.add(address);
+    }
+    await calculateTotals();
+  }
+
   Future<void> applyPromo(String code) async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -86,6 +96,10 @@ class CheckoutController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      if (type == 'delivery' && selectedAddressId.value.isEmpty) {
+        errorMessage.value = 'Please select a delivery address.';
+        return null;
+      }
       final order = await ServiceLocator.orderService.createOrder(
         type: type,
         paymentMethod: paymentMethod,

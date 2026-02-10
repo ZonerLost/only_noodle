@@ -10,6 +10,7 @@ import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:get/get.dart';
 import 'package:only_noodle/controllers/profile_controller.dart';
+import 'package:only_noodle/models/user_profile.dart';
 
 class CEditProfile extends StatefulWidget {
   const CEditProfile({super.key});
@@ -24,6 +25,7 @@ class _CEditProfileState extends State<CEditProfile> {
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
+  bool _didInit = false;
 
   @override
   void initState() {
@@ -38,6 +40,13 @@ class _CEditProfileState extends State<CEditProfile> {
       text: _controller.profile.value?.phone ?? '',
     );
     _addressController = TextEditingController();
+    ever(_controller.profile, (UserProfile? profile) {
+      if (profile == null || _didInit) return;
+      _nameController.text = profile.name;
+      _emailController.text = profile.email;
+      _phoneController.text = profile.phone;
+      _didInit = true;
+    });
   }
 
   @override
@@ -145,6 +154,7 @@ class _CEditProfileState extends State<CEditProfile> {
             labelText: "Address",
             hintText: 'St3 Wilson road , California , USA',
             controller: _addressController,
+            isReadOnly: true,
           ),
         ],
       ),
@@ -165,12 +175,31 @@ class _CEditProfileState extends State<CEditProfile> {
                   )
                 : null,
             onTap: () async {
+              if (_nameController.text.trim().length < 2) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Name must be at least 2 characters.')),
+                );
+                return;
+              }
+              if (_phoneController.text.trim().length < 6) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Phone must be at least 6 digits.')),
+                );
+                return;
+              }
               final ok = await _controller.updateProfile(
                 name: _nameController.text.trim(),
                 phone: _phoneController.text.trim(),
               );
               if (ok) {
                 Get.back();
+              } else if (_controller.errorMessage.value.isNotEmpty) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_controller.errorMessage.value)),
+                );
               }
             },
           ),

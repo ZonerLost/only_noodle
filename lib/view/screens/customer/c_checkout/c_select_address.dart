@@ -8,6 +8,7 @@ import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:only_noodle/controllers/addresses_controller.dart';
+import 'package:only_noodle/controllers/checkout_controller.dart';
 
 class CSelectAddress extends StatelessWidget {
   const CSelectAddress({super.key});
@@ -15,6 +16,9 @@ class CSelectAddress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(AddressesController());
+    final checkoutController = Get.isRegistered<CheckoutController>()
+        ? Get.find<CheckoutController>()
+        : null;
     return Scaffold(
       appBar: simpleAppBar(title: 'Select Address'),
       body: Obx(
@@ -40,6 +44,9 @@ class CSelectAddress extends StatelessWidget {
               return GestureDetector(
                 onTap: () async {
                   await controller.setDefault(address.id);
+                  if (checkoutController != null) {
+                    await checkoutController.setSelectedAddress(address);
+                  }
                 },
                 child: Container(
                   margin: EdgeInsets.only(bottom: 10),
@@ -72,7 +79,9 @@ class CSelectAddress extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (address.isDefault)
+                      if ((checkoutController?.selectedAddressId.value ==
+                              address.id) ||
+                          address.isDefault)
                         Image.asset(Assets.imagesCheck, height: 20),
                     ],
                   ),
@@ -87,7 +96,11 @@ class CSelectAddress extends StatelessWidget {
         child: MyButton(
           buttonText: 'Continue',
           onTap: () {
-            Get.to(() => CCheckout());
+            if (checkoutController != null) {
+              Get.back();
+            } else {
+              Get.to(() => CCheckout());
+            }
           },
         ),
       ),

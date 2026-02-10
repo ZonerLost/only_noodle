@@ -38,7 +38,7 @@ class CAddresses extends StatelessWidget {
             itemBuilder: (context, idx) {
               final address = controller.addresses[idx];
               return GestureDetector(
-                onTap: () {},
+                onTap: () => Get.to(() => CAddNewAddress(address: address)),
                 child: Container(
                   margin: EdgeInsets.only(bottom: 10),
                   padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
@@ -75,7 +75,12 @@ class CAddresses extends StatelessWidget {
                         child: Image.asset(Assets.imagesDel, height: 20),
                       ),
                       SizedBox(width: 10),
-                      Image.asset(Assets.imagesEd, height: 20),
+                      GestureDetector(
+                        onTap: () {
+                          Get.to(() => CAddNewAddress(address: address));
+                        },
+                        child: Image.asset(Assets.imagesEd, height: 20),
+                      ),
                     ],
                   ),
                 ),

@@ -26,12 +26,13 @@ class Address {
   factory Address.fromJson(Map<String, dynamic> json) {
     final coordinates = json['coordinates'] as Map<String, dynamic>?;
     return Address(
-      id: (json['id'] ?? '').toString(),
-      label: (json['label'] ?? '').toString(),
+      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      label: (json['label'] ?? json['title'] ?? '').toString(),
       street: (json['street'] ?? '').toString(),
-      city: (json['city'] ?? '').toString(),
-      zipCode: (json['zipCode'] ?? '').toString(),
-      country: (json['country'] ?? '').toString(),
+      city: (json['city'] ?? json['state'] ?? '').toString(),
+      zipCode: (json['zipCode'] ?? json['zip'] ?? json['postalCode'] ?? '')
+          .toString(),
+      country: (json['country'] ?? json['countryCode'] ?? '').toString(),
       lat: coordinates == null ? null : (coordinates['lat'] as num?)?.toDouble(),
       lng: coordinates == null ? null : (coordinates['lng'] as num?)?.toDouble(),
       isDefault: json['isDefault'] == true,

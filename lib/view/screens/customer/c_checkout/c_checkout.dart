@@ -121,7 +121,11 @@ class _CCheckoutState extends State<CCheckout> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () => Get.to(() => CSelectAddress()),
+                              onTap: () {
+                                Get.to(() => CSelectAddress())?.then((_) {
+                                  _controller.loadCheckoutData();
+                                });
+                              },
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -488,6 +492,13 @@ class _CCheckoutState extends State<CCheckout> {
                             Get.bottomSheet(
                               COrderConfirmed(order: order),
                               isScrollControlled: true,
+                            );
+                          } else if (_controller.errorMessage.value.isNotEmpty) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(_controller.errorMessage.value),
+                              ),
                             );
                           }
                         },

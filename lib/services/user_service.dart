@@ -54,13 +54,22 @@ class UserService {
     bool isDefault = false,
     String? deliveryInstructions,
   }) async {
+    final completeAddress = [
+      street,
+      city,
+      zipCode,
+      if (country != null) country,
+    ].where((value) => value.trim().isNotEmpty).join(', ');
     final data = await _client.post(
       UserEndpoints.addresses,
       body: {
+        'title': label,
         'label': label,
         'street': street,
         'city': city,
+        'state': city,
         'zipCode': zipCode,
+        'completeAddress': completeAddress,
         if (country != null) 'country': country,
         if (lat != null || lng != null)
           'coordinates': {
@@ -87,13 +96,22 @@ class UserService {
     bool? isDefault,
     String? deliveryInstructions,
   }) async {
+    final completeAddress = [
+      street ?? '',
+      city ?? '',
+      zipCode ?? '',
+      country ?? '',
+    ].where((value) => value.trim().isNotEmpty).join(', ');
     final data = await _client.patch(
       UserEndpoints.addressById(id),
       body: {
+        if (label != null) 'title': label,
         if (label != null) 'label': label,
         if (street != null) 'street': street,
         if (city != null) 'city': city,
+        if (city != null) 'state': city,
         if (zipCode != null) 'zipCode': zipCode,
+        if (completeAddress.isNotEmpty) 'completeAddress': completeAddress,
         if (country != null) 'country': country,
         if (isDefault != null) 'isDefault': isDefault,
         if (deliveryInstructions != null) 'deliveryInstructions': deliveryInstructions,
