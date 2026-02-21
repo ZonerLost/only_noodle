@@ -18,6 +18,11 @@ class DriverProfile {
   });
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) {
+    final status = json['status']?.toString();
+    final isOnlineValue = json['isOnline'];
+    final bool isOnline = isOnlineValue is bool
+        ? isOnlineValue
+        : (status != null && status.isNotEmpty && status != 'inactive');
     return DriverProfile(
       id: (json['id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
@@ -25,7 +30,7 @@ class DriverProfile {
       phone: (json['phone'] ?? '').toString(),
       vehicleType: (json['vehicleType'] ?? '').toString(),
       licensePlate: (json['licensePlate'] ?? '').toString(),
-      isOnline: json['isOnline'] == true,
+      isOnline: isOnline,
     );
   }
 }

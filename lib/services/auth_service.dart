@@ -198,20 +198,24 @@ class AuthService {
   }) {
     if (data is Map<String, dynamic>) {
       final userJson = data['user'] as Map<String, dynamic>? ?? data['user'];
+      final driverJson = data['driver'] as Map<String, dynamic>? ?? data['driver'];
       final tokens = data['tokens'] as Map<String, dynamic>? ?? data['tokens'];
       final accessToken =
           tokens?['accessToken']?.toString() ?? data['accessToken']?.toString();
       final refreshToken =
           tokens?['refreshToken']?.toString() ?? data['refreshToken']?.toString();
       final roleFromUser = userJson?['role']?.toString();
-      final roleToSave = (roleFromUser != null && roleFromUser.isNotEmpty)
-          ? roleFromUser
-          : (fallbackRole ?? 'customer');
-      if (userJson != null && accessToken != null && refreshToken != null) {
+      final roleToSave = (driverJson != null)
+          ? 'driver'
+          : ((roleFromUser != null && roleFromUser.isNotEmpty)
+              ? roleFromUser
+              : (fallbackRole ?? 'customer'));
+      final profileJson = userJson ?? driverJson;
+      if (profileJson != null && accessToken != null && refreshToken != null) {
         _storage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
         _storage.saveRememberMe(rememberMe);
         _storage.saveRole(roleToSave);
-        final user = UserProfile.fromJson(userJson);
+        final user = UserProfile.fromJson(profileJson);
         _storage.saveUser(user.toJson());
         return user;
       }

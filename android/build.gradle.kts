@@ -5,6 +5,18 @@ allprojects {
     }
 }
 
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force(
+                "androidx.core:core:1.15.0",
+                "androidx.core:core-ktx:1.15.0",
+                "androidx.browser:browser:1.8.0"
+            )
+        }
+    }
+}
+
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 

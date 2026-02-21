@@ -20,7 +20,7 @@ class UserProfile {
       id: (json['id'] ?? json['_id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
       name: (json['name'] ?? json['fullName'] ?? '').toString(),
-      phone: (json['phone'] ?? '').toString(),
+      phone: (json['phone'] ?? json['phoneNumber'] ?? '').toString(),
       language: (json['language'] ?? '').toString(),
       profilePicture: (json['profilePicture'] ?? json['imageUrl'] ?? '').toString(),
     );

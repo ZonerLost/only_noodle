@@ -129,6 +129,8 @@ class _LoginState extends State<Login> {
                     Get.offAll(() => DHome());
                   } else {
                     Get.offAll(() => CBottomNavBar());
+                    // Get.offAll(() => DHome());
+
                   }
                 }
               },

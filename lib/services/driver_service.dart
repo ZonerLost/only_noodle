@@ -39,8 +39,15 @@ class DriverService {
     throw Exception('Invalid driver profile response');
   }
 
-  Future<List<Order>> getAvailableOrders() async {
-    final data = await _client.get(DriverEndpoints.orders);
+  Future<List<Order>> getAvailableOrders({int page = 1, int limit = 20}) async {
+    final data = await _client.get(
+      DriverEndpoints.orders,
+      query: {
+        'type': 'available',
+        'page': page.toString(),
+        'limit': limit.toString(),
+      },
+    );
     if (data is List) {
       return data.whereType<Map<String, dynamic>>().map(Order.fromJson).toList();
     }
@@ -66,8 +73,14 @@ class DriverService {
     );
   }
 
-  Future<List<Order>> getHistory() async {
-    final data = await _client.get(DriverEndpoints.history);
+  Future<List<Order>> getHistory({int page = 1, int limit = 20}) async {
+    final data = await _client.get(
+      DriverEndpoints.history,
+      query: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      },
+    );
     if (data is List) {
       return data.whereType<Map<String, dynamic>>().map(Order.fromJson).toList();
     }
@@ -76,13 +89,34 @@ class DriverService {
 
   Future<Map<String, dynamic>?> getTipsSummary() async {
     final data = await _client.get(DriverEndpoints.tips);
-    if (data is Map<String, dynamic>) return data;
+    if (data is Map<String, dynamic>) {
+      final summary = data['summary'];
+      if (summary is Map<String, dynamic>) {
+        return {
+          'total': summary['totalTips'] ?? summary['periodTips'] ?? 0,
+          'period': summary['periodTips'] ?? 0,
+          'count': summary['count'] ?? 0,
+          'raw': data,
+        };
+      }
+      return data;
+    }
     return null;
   }
 
   Future<Map<String, dynamic>?> getStats() async {
     final data = await _client.get(DriverEndpoints.stats);
-    if (data is Map<String, dynamic>) return data;
+    if (data is Map<String, dynamic>) {
+      return {
+        'orders': data['deliveriesThisWeek'] ?? data['totalDeliveries'] ?? 0,
+        'ordersMonth': data['deliveriesThisMonth'] ?? 0,
+        'tipsWeek': data['tipsThisWeek'] ?? 0,
+        'tipsMonth': data['tipsThisMonth'] ?? 0,
+        'rating': data['rating'] ?? 0,
+        'ratingCount': data['ratingCount'] ?? 0,
+        'raw': data,
+      };
+    }
     return null;
   }
 

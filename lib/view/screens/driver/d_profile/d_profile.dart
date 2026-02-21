@@ -30,6 +30,12 @@ class _DProfileState extends State<DProfile> {
   final AuthController _authController = Get.put(AuthController());
 
   @override
+  void initState() {
+    super.initState();
+    _profileController.loadProfile();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: simpleAppBar(title: 'User Profile'),
@@ -92,84 +98,86 @@ class _DProfileState extends State<DProfile> {
             ),
           ),
           SizedBox(height: 8),
-          Row(
-            spacing: 8,
-            children: List.generate(2, (index) {
-              final stats = [
-                {
-                  'period': 'This Week',
-                  'value':
-                      (_profileController.stats['orders'] ?? 0).toString(),
-                  'label': 'Orders Completed',
-                },
-                {
-                  'period': 'This Week',
-                  'value':
-                      'EUR ${(_profileController.tipsSummary['total'] ?? 0).toString()}',
-                  'label': 'Tips Collected',
-                },
-              ];
-              final item = stats[index];
-              final period = item['period'] ?? '';
-              final value = item['value'] ?? '';
-              final subtitle = item['label'] ?? '';
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    height: 130,
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: kFillColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Image.asset(
-                              index == 0
-                                  ? Assets.imagesOrderCompleted
-                                  : Assets.imagesTipsCollected,
-                              height: 44,
-                            ),
-                            MyText(
-                              text: period,
-                              size: 12,
-                              color: kQuaternaryColor,
-                              weight: FontWeight.w500,
-                            ),
-                          ],
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+          Obx(
+            () => Row(
+              spacing: 8,
+              children: List.generate(2, (index) {
+                final stats = [
+                  {
+                    'period': 'This Week',
+                    'value':
+                        (_profileController.stats['orders'] ?? 0).toString(),
+                    'label': 'Orders Completed',
+                  },
+                  {
+                    'period': 'This Week',
+                    'value':
+                        'EUR ${(_profileController.tipsSummary['total'] ?? 0).toString()}',
+                    'label': 'Tips Collected',
+                  },
+                ];
+                final item = stats[index];
+                final period = item['period'] ?? '';
+                final value = item['value'] ?? '';
+                final subtitle = item['label'] ?? '';
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: Container(
+                      height: 130,
+                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: kFillColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              MyText(
-                                text: value,
-                                size: 18,
-                                weight: FontWeight.w600,
+                              Image.asset(
+                                index == 0
+                                    ? Assets.imagesOrderCompleted
+                                    : Assets.imagesTipsCollected,
+                                height: 44,
                               ),
-                              SizedBox(height: 4),
                               MyText(
-                                text: subtitle,
+                                text: period,
                                 size: 12,
                                 color: kQuaternaryColor,
                                 weight: FontWeight.w500,
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                MyText(
+                                  text: value,
+                                  size: 18,
+                                  weight: FontWeight.w600,
+                                ),
+                                SizedBox(height: 4),
+                                MyText(
+                                  text: subtitle,
+                                  size: 12,
+                                  color: kQuaternaryColor,
+                                  weight: FontWeight.w500,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
           MyText(
             text: 'SETTINGS',

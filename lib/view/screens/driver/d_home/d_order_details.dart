@@ -12,6 +12,7 @@ import 'package:only_noodle/view/widget/my_button_widget.dart';
 import 'package:only_noodle/view/widget/my_text_field_widget.dart';
 import 'package:only_noodle/view/widget/my_text_widget.dart';
 import 'package:only_noodle/controllers/driver_order_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DOrderDetails extends StatefulWidget {
   const DOrderDetails({super.key, required this.orderId});
@@ -26,6 +27,46 @@ class _DOrderDetailsState extends State<DOrderDetails> {
   late final DriverOrderController _controller;
   bool _orderPicked = false;
   bool _markComplete = false;
+
+  Future<void> _openMaps() async {
+    final order = _controller.order.value;
+    final lat = order?.address?.lat;
+    final lng = order?.address?.lng;
+    final query = (lat != null && lng != null)
+        ? '${lat.toStringAsFixed(6)},${lng.toStringAsFixed(6)}'
+        : (order?.address?.displayLine ?? '');
+    if (query.isEmpty) return;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    try {
+      if (!await canLaunchUrl(uri)) {
+        Get.snackbar('Maps not available', 'No app found to open maps.');
+        return;
+      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      Get.snackbar('Maps error', 'Unable to open maps.');
+    }
+  }
+
+  Future<void> _callCustomer() async {
+    final phone = _controller.order.value?.customerPhone ?? '';
+    if (phone.isEmpty) {
+      Get.snackbar('No phone', 'Customer phone is not available.');
+      return;
+    }
+    final uri = Uri.parse('tel:$phone');
+    try {
+      if (!await canLaunchUrl(uri)) {
+        Get.snackbar('Call not available', 'No dialer available.');
+        return;
+      }
+      await launchUrl(uri);
+    } catch (_) {
+      Get.snackbar('Call error', 'Unable to start a call.');
+    }
+  }
 
   @override
   void initState() {
@@ -88,21 +129,24 @@ class _DOrderDetailsState extends State<DOrderDetails> {
                         ),
                       ],
                     ),
-                    Container(
-                      margin: EdgeInsets.only(top: 12),
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: kSecondaryColor.withValues(alpha: 0.12),
-                        border: Border(
-                          left: BorderSide(color: kSecondaryColor, width: 2),
+                    GestureDetector(
+                      onTap: _openMaps,
+                      child: Container(
+                        margin: EdgeInsets.only(top: 12),
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: kSecondaryColor.withValues(alpha: 0.12),
+                          border: Border(
+                            left: BorderSide(color: kSecondaryColor, width: 2),
+                          ),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: MyText(
-                        text: 'Google Maps',
-                        size: 12,
-                        color: kSecondaryColor,
-                        weight: FontWeight.w600,
+                        child: MyText(
+                          text: 'Google Maps',
+                          size: 12,
+                          color: kSecondaryColor,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -142,13 +186,15 @@ class _DOrderDetailsState extends State<DOrderDetails> {
                           Expanded(
                             child: MyText(
                               paddingLeft: 8,
-                              text: order.address?.label ?? 'Customer',
+                              text: order.customerName.isNotEmpty
+                                  ? order.customerName
+                                  : (order.address?.label ?? 'Customer'),
                               size: 14,
                               weight: FontWeight.w600,
                             ),
                           ),
                           GestureDetector(
-                            onTap: () {},
+                            onTap: _callCustomer,
                             child: Image.asset(Assets.imagesCall, height: 32),
                           ),
                         ],
@@ -224,7 +270,9 @@ class _DOrderDetailsState extends State<DOrderDetails> {
                 },
                 {
                   'title': 'Payment Type',
-                  'value': order?.paymentMethod ?? 'Cash on Delivery',
+                  'value': (order?.paymentMethod.isNotEmpty ?? false)
+                      ? order!.paymentMethod
+                      : 'Cash on Delivery',
                   'currency': false,
                 },
               ];
@@ -371,17 +419,28 @@ class _DOrderDetailsState extends State<DOrderDetails> {
                         buttonText: 'Done',
                         onTap: () async {
                           Get.back();
-                          if (!_orderPicked) {
-                            await _controller.acceptOrder();
+                          final order = _controller.order.value;
+                          final status = order?.status ?? '';
+                          if (status == 'ready') {
+                            // Assigned order: move to out_for_delivery
+                            await _controller.updateStatus('out_for_delivery');
                             setState(() {
                               _orderPicked = true;
                               _markComplete = false;
                             });
-                          } else {
+                          } else if (status == 'out_for_delivery' ||
+                              status == 'picked_up') {
                             await _controller.updateStatus('delivered');
                             setState(() {
                               _orderPicked = false;
                               _markComplete = true;
+                            });
+                          } else if (!_orderPicked) {
+                            // Fallback for available orders (if any)
+                            await _controller.acceptOrder();
+                            setState(() {
+                              _orderPicked = true;
+                              _markComplete = false;
                             });
                           }
                         },
